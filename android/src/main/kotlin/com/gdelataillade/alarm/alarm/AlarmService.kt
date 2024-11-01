@@ -16,10 +16,8 @@ import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.PowerManager
 import android.os.Build
+import com.gdelataillade.alarm.services.NotificationHandler
 import io.flutter.Log
-import io.flutter.embedding.engine.dart.DartExecutor
-import io.flutter.embedding.engine.FlutterEngine
-import org.json.JSONObject
 
 class AlarmService : Service() {
     private var audioService: AudioService? = null
@@ -89,12 +87,17 @@ class AlarmService : Service() {
             } else {
                 startForeground(id, notification)
             }
-        } catch (e: ForegroundServiceStartNotAllowedException) {
-            Log.e("AlarmService", "Foreground service start not allowed", e)
-            return START_NOT_STICKY
         } catch (e: SecurityException) {
             Log.e("AlarmService", "Security exception in starting foreground service", e)
             return START_NOT_STICKY
+        } catch (e: Exception) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (e is ForegroundServiceStartNotAllowedException) {
+                    Log.e("AlarmService", "Foreground service start not allowed", e)
+                    return START_NOT_STICKY
+                }
+            }
+            throw e
         }
 
         // Check if an alarm is already ringing
@@ -110,6 +113,8 @@ class AlarmService : Service() {
         val vibrate = intent.getBooleanExtra("vibrate", true)
         val volume = intent.getDoubleExtra("volume", -1.0)
         val fadeDuration = intent.getDoubleExtra("fadeDuration", 0.0)
+        val fadeStopTimes = intent.getSerializableExtra("fadeStopTimes") as? ArrayList<Double> ?: arrayListOf()
+        val fadeStopVolumes = intent.getSerializableExtra("fadeStopVolumes") as? ArrayList<Double> ?: arrayListOf()
 
         // Notify the plugin about the alarm ringing
         AlarmPlugin.eventSink?.success(
@@ -120,7 +125,7 @@ class AlarmService : Service() {
         )
 
         // Set the volume if specified
-        if (volume >= 0.0 && volume <= 1.0) {
+        if (volume in 0.0..1.0) {
             volumeService?.setVolume(volume, showSystemUI)
         }
 
@@ -137,7 +142,7 @@ class AlarmService : Service() {
         }
 
         // Play the alarm audio
-        audioService?.playAudio(id, assetAudioPath, loopAudio, fadeDuration)
+        audioService?.playAudio(id, assetAudioPath, loopAudio, fadeDuration, fadeStopTimes, fadeStopVolumes)
 
         // Update the list of ringing alarms
         ringingAlarmIds = audioService?.getPlayingMediaPlayersIds() ?: listOf()
@@ -155,7 +160,7 @@ class AlarmService : Service() {
         return START_STICKY
     }
 
-    fun unsaveAlarm(id: Int) {
+    private fun unsaveAlarm(id: Int) {
         AlarmStorage(this).unsaveAlarm(id)
         AlarmPlugin.eventSink?.success(mapOf(
             "id" to id,
@@ -164,7 +169,7 @@ class AlarmService : Service() {
         stopAlarm(id)
     }
 
-    fun stopAlarm(id: Int) {
+    private fun stopAlarm(id: Int) {
         try {
             val playingIds = audioService?.getPlayingMediaPlayersIds() ?: listOf()
             ringingAlarmIds = playingIds

@@ -1,7 +1,6 @@
 package com.gdelataillade.alarm.alarm
 
 import com.gdelataillade.alarm.services.NotificationOnKillService
-import com.gdelataillade.alarm.services.AlarmStorage
 import com.gdelataillade.alarm.models.AlarmSettings
 
 import android.os.Build
@@ -11,8 +10,6 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import androidx.annotation.NonNull
-import java.util.Date
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
@@ -35,7 +32,7 @@ class AlarmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         var eventSink: EventChannel.EventSink? = null
     }
 
-    override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         context = flutterPluginBinding.applicationContext
 
         methodChannel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.gdelataillade.alarm/alarm")
@@ -53,7 +50,7 @@ class AlarmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         })
     }
 
-    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: MethodChannel.Result) {
+    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "setAlarm" -> {
                 setAlarm(call, result)
@@ -135,7 +132,7 @@ class AlarmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         }
     }
 
-    fun stopAlarm(id: Int, result: MethodChannel.Result? = null) {
+    private fun stopAlarm(id: Int, result: MethodChannel.Result? = null) {
         if (AlarmService.ringingAlarmIds.contains(id)) {
             val stopIntent = Intent(context, AlarmService::class.java)
             stopIntent.action = "STOP_ALARM"
@@ -164,19 +161,21 @@ class AlarmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         result?.success(true)
     }
 
-    fun createAlarmIntent(context: Context, call: MethodCall, id: Int?): Intent {
+    private fun createAlarmIntent(context: Context, call: MethodCall, id: Int?): Intent {
         val alarmIntent = Intent(context, AlarmReceiver::class.java)
         setIntentExtras(alarmIntent, call, id)
         return alarmIntent
     }
 
-    fun setIntentExtras(intent: Intent, call: MethodCall, id: Int?) {
+    private fun setIntentExtras(intent: Intent, call: MethodCall, id: Int?) {
         intent.putExtra("id", id)
         intent.putExtra("assetAudioPath", call.argument<String>("assetAudioPath"))
         intent.putExtra("loopAudio", call.argument<Boolean>("loopAudio") ?: true)
         intent.putExtra("vibrate", call.argument<Boolean>("vibrate") ?: true)
         intent.putExtra("volume", call.argument<Double>("volume"))
         intent.putExtra("fadeDuration", call.argument<Double>("fadeDuration") ?: 0.0)
+        intent.putExtra("fadeStopTimes", call.argument<ArrayList<Double>>("fadeStopTimes") ?: arrayListOf<Double>())
+        intent.putExtra("fadeStopVolumes", call.argument<ArrayList<Double>>("fadeStopVolumes") ?: arrayListOf<Double>())
         intent.putExtra("fullScreenIntent", call.argument<Boolean>("fullScreenIntent") ?: true)
 
         val notificationSettingsMap = call.argument<Map<String, Any>>("notificationSettings")
@@ -185,14 +184,14 @@ class AlarmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         intent.putExtra("notificationSettings", notificationSettingsJson)
     }
 
-    fun handleImmediateAlarm(context: Context, intent: Intent, delayInSeconds: Int) {
+    private fun handleImmediateAlarm(context: Context, intent: Intent, delayInSeconds: Int) {
         val handler = Handler(Looper.getMainLooper())
         handler.postDelayed({
             context.sendBroadcast(intent)
         }, delayInSeconds * 1000L)
     }
 
-    fun handleDelayedAlarm(
+    private fun handleDelayedAlarm(
         context: Context,
         intent: Intent,
         delayInSeconds: Int,
@@ -231,7 +230,7 @@ class AlarmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         }
     }
 
-    fun setWarningNotificationOnKill(context: Context) {
+    private fun setWarningNotificationOnKill(context: Context) {
         val serviceIntent = Intent(context, NotificationOnKillService::class.java)
         serviceIntent.putExtra("title", notificationOnKillTitle)
         serviceIntent.putExtra("body", notificationOnKillBody)
@@ -240,13 +239,13 @@ class AlarmPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         notifOnKillEnabled = true
     }
 
-    fun disableWarningNotificationOnKill(context: Context) {
+    private fun disableWarningNotificationOnKill(context: Context) {
         val serviceIntent = Intent(context, NotificationOnKillService::class.java)
         context.stopService(serviceIntent)
         notifOnKillEnabled = false
     }
 
-    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         methodChannel.setMethodCallHandler(null)
         eventChannel.setStreamHandler(null)
     }

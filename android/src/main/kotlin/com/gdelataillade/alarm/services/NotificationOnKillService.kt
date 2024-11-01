@@ -6,8 +6,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
 import android.provider.Settings
 import android.os.Build
 import android.os.IBinder
@@ -16,10 +14,13 @@ import androidx.core.app.NotificationCompat
 import io.flutter.Log
 
 class NotificationOnKillService : Service() {
+    companion object {
+        const val NOTIFICATION_ID = 88888
+        const val CHANNEL_ID = "com.gdelataillade.alarm.alarm_channel"
+    }
+
     private lateinit var title: String
     private lateinit var body: String
-    private val NOTIFICATION_ID = 88888
-    private val CHANNEL_ID = "com.gdelataillade.alarm.alarm_channel"
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         title = intent?.getStringExtra("title") ?: "Your alarms could not ring"

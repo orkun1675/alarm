@@ -8,7 +8,7 @@ import android.os.Build
 import kotlin.math.round
 import io.flutter.Log
 
-class VolumeService(private val context: Context) {
+class VolumeService(context: Context) {
     private var previousVolume: Int? = null
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private var focusRequest: AudioFocusRequest? = null
@@ -16,8 +16,8 @@ class VolumeService(private val context: Context) {
     fun setVolume(volume: Double, showSystemUI: Boolean) {
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         previousVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-        val _volume = (round(volume * maxVolume)).toInt()
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, _volume, if (showSystemUI) AudioManager.FLAG_SHOW_UI else 0)
+        val relativeVolume = (round(volume * maxVolume)).toInt()
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, relativeVolume, if (showSystemUI) AudioManager.FLAG_SHOW_UI else 0)
     }
 
     fun restorePreviousVolume(showSystemUI: Boolean) {

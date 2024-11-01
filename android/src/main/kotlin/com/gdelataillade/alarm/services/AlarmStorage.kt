@@ -12,7 +12,6 @@ import io.flutter.Log
 
 class AlarmStorage(context: Context) {
     companion object {
-        private const val PREFS_NAME = "alarm_prefs"
         private const val PREFIX = "flutter.__alarm_id__"
     }
 
@@ -33,7 +32,7 @@ class AlarmStorage(context: Context) {
     }
 
     fun getSavedAlarms(): List<AlarmSettings> {
-        val gsonBuilder = GsonBuilder().registerTypeAdapter(Date::class.java, JsonDeserializer<Date> { json, _, _ ->
+        val gsonBuilder = GsonBuilder().registerTypeAdapter(Date::class.java, JsonDeserializer { json, _, _ ->
             Date(json.asJsonPrimitive.asLong)
         })
         val gson: Gson = gsonBuilder.create()

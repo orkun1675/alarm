@@ -4,17 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import com.gdelataillade.alarm.alarm.AlarmPlugin
 import com.gdelataillade.alarm.services.AlarmStorage
-import com.google.gson.Gson
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.os.Build
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -32,11 +24,6 @@ class BootReceiver : BroadcastReceiver() {
         Log.d("BootReceiver", "Rescheduling ${storedAlarms.size} alarms")
     
         for (alarm in storedAlarms) {
-            if (alarm.notificationSettings == null) {
-                Log.d("BootReceiver", "Skipping alarm with ID: ${alarm.id} due to missing notificationSettings")
-                continue
-            }
-    
             var alarmArgs: Map<String, Any>? = null
     
             try {
@@ -44,10 +31,12 @@ class BootReceiver : BroadcastReceiver() {
                 alarmArgs = mapOf(
                     "id" to alarm.id,
                     "dateTime" to alarm.dateTime.time,
-                    "assetAudioPath" to (alarm.assetAudioPath ?: ""),
+                    "assetAudioPath" to alarm.assetAudioPath,
                     "loopAudio" to alarm.loopAudio,
                     "vibrate" to alarm.vibrate,
                     "fadeDuration" to alarm.fadeDuration,
+                    "fadeStopTimes" to alarm.fadeStopTimes,
+                    "fadeStopVolumes" to alarm.fadeStopVolumes,
                     "fullScreenIntent" to alarm.androidFullScreenIntent,
                     "notificationSettings" to mapOf(
                         "title" to alarm.notificationSettings.title,
@@ -58,7 +47,7 @@ class BootReceiver : BroadcastReceiver() {
                 ).toMutableMap()
     
                 alarm.volume?.let {
-                    (alarmArgs as MutableMap)[ "volume" ] = it
+                    alarmArgs[ "volume" ] = it
                 }
     
                 Log.d("BootReceiver", "Rescheduling alarm with ID: ${alarm.id}")

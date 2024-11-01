@@ -1,7 +1,6 @@
 package com.gdelataillade.alarm.models
 
 import com.google.gson.*
-import com.google.gson.annotations.SerializedName
 import java.util.Date
 import io.flutter.Log
 import java.lang.reflect.Type
@@ -15,6 +14,8 @@ data class AlarmSettings(
     val vibrate: Boolean,
     val volume: Double?,
     val fadeDuration: Double,
+    val fadeStopTimes: List<Double>,
+    val fadeStopVolumes: List<Double>,
     val warningNotificationOnKill: Boolean,
     val androidFullScreenIntent: Boolean
 ) {

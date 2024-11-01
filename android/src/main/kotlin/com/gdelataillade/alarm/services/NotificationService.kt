@@ -1,4 +1,4 @@
-package com.gdelataillade.alarm.alarm
+package com.gdelataillade.alarm.services
 
 import com.gdelataillade.alarm.models.NotificationSettings
 import android.app.Notification
@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import com.gdelataillade.alarm.alarm.AlarmReceiver
 
 class NotificationHandler(private val context: Context) {
     companion object {
