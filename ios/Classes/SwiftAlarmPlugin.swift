@@ -104,6 +104,8 @@ public class SwiftAlarmPlugin: NSObject, FlutterPlugin {
             vibrationsEnabled: alarmSettings.vibrate,
             loopAudio: alarmSettings.loopAudio,
             fadeDuration: alarmSettings.fadeDuration,
+            fadeStopTimes: alarmSettings.fadeStopTimes,
+            fadeStopVolumes: alarmSettings.fadeStopVolumes,
             volume: volumeFloat
         )
 
@@ -138,6 +140,7 @@ public class SwiftAlarmPlugin: NSObject, FlutterPlugin {
                 self.startSilentSound()
             }
 
+            audioPlayer.volume = 0.0
             audioPlayer.play(atTime: time + 0.5)
 
             self.alarms[id]?.audioPlayer = audioPlayer
@@ -191,7 +194,7 @@ public class SwiftAlarmPlugin: NSObject, FlutterPlugin {
             do {
                 self.silentAudioPlayer = try AVAudioPlayer(contentsOf: audioUrl)
                 self.silentAudioPlayer?.numberOfLoops = -1
-                self.silentAudioPlayer?.volume = 0.1
+                self.silentAudioPlayer?.volume = 0.01
                 self.playSilent = true
                 self.silentAudioPlayer?.play()
                 NotificationCenter.default.addObserver(self, selector: #selector(handleInterruption), name: AVAudioSession.interruptionNotification, object: nil)
@@ -283,44 +286,56 @@ public class SwiftAlarmPlugin: NSObject, FlutterPlugin {
         } else {
             targetSystemVolume = currentSystemVolume
         }
-
-        if alarm.fadeDuration > 0.0 {
-            audioPlayer.volume = 0.01
-            fadeVolume(audioPlayer: audioPlayer, duration: alarm.fadeDuration)
+        
+        if !alarm.fadeStopTimes.isEmpty {
+            fadeAlarmVolumeWithStops(id: id, stopTimes: alarm.fadeStopTimes, stopVolumes: alarm.fadeStopVolumes)
+        }
+        else if alarm.fadeDuration > 0.0 {
+            fadeAlarmVolumeWithStops(id: id, stopTimes: [0, alarm.fadeDuration], stopVolumes: [0.0, 1.0])
         } else {
             audioPlayer.volume = 1.0
+        }
+    }
+    
+    private func fadeAlarmVolumeWithStops(id: Int, stopTimes: [TimeInterval], stopVolumes: [Float]) {
+        guard let audioPlayer = self.alarms[id]?.audioPlayer else {
+            return
+        }
+        
+        // Ensure stopTimes and stopVolumes have the same count
+        guard stopTimes.count == stopVolumes.count else {
+            NSLog("[SwiftAlarmPlugin] Error: stopTimes and stopVolumes must have the same number of elements")
+            return
+        }
+        
+        if (!audioPlayer.isPlaying) {
+            return
+        }
+        
+        audioPlayer.volume = stopVolumes[0]
+        
+        let now = DispatchTime.now()
+
+        for i in 0..<stopTimes.count - 1 {
+            let startTime = stopTimes[i]
+            // Subtract 50ms to avoid weird jumps that might occur when two fades collide.
+            let fadeDuration = stopTimes[i + 1] - startTime - 0.05
+            let targetVolume = stopVolumes[i + 1]
+
+            // Schedule the fade using setVolume for a smooth transition
+            DispatchQueue.main.asyncAfter(deadline: now + startTime) {
+                if (!audioPlayer.isPlaying) {
+                    return
+                }
+                print("[SwiftAlarmPlugin] Fading volume to \(targetVolume) over \(fadeDuration) seconds.")
+                audioPlayer.setVolume(targetVolume, fadeDuration: fadeDuration)
+            }
         }
     }
 
     private func getSystemVolume() -> Float {
         let audioSession = AVAudioSession.sharedInstance()
         return audioSession.outputVolume
-    }
-
-    private func fadeVolume(audioPlayer: AVAudioPlayer, duration: TimeInterval) {
-        let fadeInterval: TimeInterval = 0.2
-        let currentVolume = audioPlayer.volume
-        let volumeDifference = 1.0 - currentVolume
-        let steps = Int(duration / fadeInterval)
-        let volumeIncrement = volumeDifference / Float(steps)
-
-        var currentStep = 0
-        Timer.scheduledTimer(withTimeInterval: fadeInterval, repeats: true) { timer in
-            if !audioPlayer.isPlaying {
-                timer.invalidate()
-                NSLog("[SwiftAlarmPlugin] Volume fading stopped as audioPlayer is no longer playing.")
-                return
-            }
-
-            NSLog("[SwiftAlarmPlugin] Fading volume: \(100 * currentStep / steps)%%")
-            if currentStep >= steps {
-                timer.invalidate()
-                audioPlayer.volume = 1.0
-            } else {
-                audioPlayer.volume += volumeIncrement
-                currentStep += 1
-            }
-        }
     }
 
     private func stopAlarm(id: Int, cancelNotif: Bool, result: FlutterResult) {
