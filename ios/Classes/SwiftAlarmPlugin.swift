@@ -55,7 +55,7 @@ public class SwiftAlarmPlugin: NSObject, FlutterPlugin {
             if id == nil {
                 result(self.isAnyAlarmRinging())
             } else {
-                result(self.alarms[id!]?.audioPlayer?.isPlaying ?? false)
+                result(self.alarms[id!]?.triggerTime?.timeIntervalSinceNow ?? 1 <= 0)
             }
         case "setWarningNotificationOnKill":
             guard let args = call.arguments as? [String: Any] else {
@@ -214,14 +214,14 @@ public class SwiftAlarmPlugin: NSObject, FlutterPlugin {
         }
 
         switch type {
-            case .began:
-                self.silentAudioPlayer?.play()
-                NSLog("[SwiftAlarmPlugin] Interruption began")
-            case .ended:
-                self.silentAudioPlayer?.play()
-                NSLog("[SwiftAlarmPlugin] Interruption ended")
-            default:
-                break
+        case .began:
+            self.silentAudioPlayer?.play()
+            NSLog("[SwiftAlarmPlugin] Interruption began")
+        case .ended:
+            self.silentAudioPlayer?.play()
+            NSLog("[SwiftAlarmPlugin] Interruption ended")
+        default:
+            break
         }
     }
 
@@ -239,7 +239,7 @@ public class SwiftAlarmPlugin: NSObject, FlutterPlugin {
 
     private func isAnyAlarmRinging() -> Bool {
         for (_, alarmConfig) in self.alarms {
-            if let audioPlayer = alarmConfig.audioPlayer, audioPlayer.isPlaying, audioPlayer.currentTime > 0 {
+            if alarmConfig.triggerTime?.timeIntervalSinceNow ?? 1 <= 0 {
                 return true
             }
         }
