@@ -245,9 +245,19 @@ public class SwiftAlarmPlugin: NSObject, FlutterPlugin {
         }
         return false
     }
+    
+    private func isAnyAlarmRingingExcept(id: Int) -> Bool {
+        for (_, alarmConfig) in self.alarms {
+            if alarmConfig.id != id && alarmConfig.triggerTime?.timeIntervalSinceNow ?? 1 <= 0 {
+                return true
+            }
+        }
+        return false
+    }
+
 
     private func handleAlarmAfterDelay(id: Int) {
-        if self.isAnyAlarmRinging() {
+        if self.isAnyAlarmRingingExcept(id: id) {
             NSLog("[SwiftAlarmPlugin] Ignoring alarm with id \(id) because another alarm is already ringing.")
             self.unsaveAlarm(id: id)
             return
