@@ -100,6 +100,8 @@ abstract class AlarmApi {
 
   void stopAlarm({required int alarmId});
 
+  void stopAll();
+
   bool isRinging({required int? alarmId});
 
   void setWarningNotificationOnKill({

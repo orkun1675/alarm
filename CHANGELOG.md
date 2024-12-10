@@ -1,3 +1,6 @@
+## 5.0.2
+* Handles `stopAll` on the platform side for improved reliability.
+
 ## 5.0.1
 * Fixes a bug where `isRinging` might return FALSE immediately after alarm starts to ring.
 * Handles alarm events on the platform side, increasing efficiency.
